@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campo Minato</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            flex-direction: column;
+        }
+        .minesweeper {
+            display: grid;
+            gap: 1px;
+            background-color: #aaa;
+            border: 2px solid #000;
+        }
+        .cell {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #ccc;
+            cursor: pointer;
+        }
+        .cell img {
+            width: 100%;
+            height: 100%;
+            display: none;
+        }
+        .cell.revealed {
+            background-color: #eee;
+        }
+        .cell.revealed img {
+            display: block;
+        }
+        .controls {
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .controls img {
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <img src="smile.png" alt="Ricomincia" id="restart">
+    </div>
+    <div class="minesweeper" id="minesweeper"></div>
+
+    <script>
+        const numRows = 10;
+        const numCols = 10;
+        const numBombs = 10;
+        const mineField = document.getElementById('minesweeper');
+        const restartButton = document.getElementById('restart');
+        let gameOver = false;
+
+        function createGrid() {
+            gameOver = false;
+            mineField.style.gridTemplateColumns = `repeat(${numCols}, 40px)`;
+            mineField.innerHTML = '';
+
+            for (let i = 0; i < numRows; i++) {
+                for (let j = 0; j < numCols; j++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+
+                    const bombImage = document.createElement('img');
+                    bombImage.src = 'bomb.png';
+                    bombImage.classList.add('bomb');
+                    cell.appendChild(bombImage);
+
+                    cell.addEventListener('click', () => revealCell(cell));
+
+                    mineField.appendChild(cell);
+                }
+            }
+
+            placeBombs();
+        }
+
+        function getRandomInt(max) {
+            return Math.floor(Math.random() * max);
+        }
+
+        function placeBombs() {
+            let bombsPlaced = 0;
+            while (bombsPlaced < numBombs) {
+                const row = getRandomInt(numRows);
+                const col = getRandomInt(numCols);
+                const cell = document.querySelector(`.cell[data-row='${row}'][data-col='${col}']`);
+                if (!cell.classList.contains('bomb')) {
+                    cell.classList.add('bomb');
+                    bombsPlaced++;
+                }
+            }
+        }
+
+        function revealCell(cell) {
+            if (gameOver || cell.classList.contains('revealed')) return;
+            cell.classList.add('revealed');
+
+            if (cell.classList.contains('bomb')) {
+                cell.querySelector('img.bomb').style.display = 'block';
+                alert('Esplosione !');
+                gameOver = true;
+                revealAllBombs();
+            } else {
+                let bombCount = countBombs(cell);
+                if (bombCount > 0) {
+                    cell.textContent = bombCount;
+                } else {
+                    revealAdjacentCells(cell);
+                }
+            }
+        }
+
+        function countBombs(cell) {
+            const row = parseInt(cell.dataset.row);
+            const col = parseInt(cell.dataset.col);
+            let count = 0;
+
+            for (let i = -1; i <= 1; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    const neighbor = document.querySelector(`.cell[data-row='${row + i}'][data-col='${col + j}']`);
+                    if (neighbor && neighbor.classList.contains('bomb')) {
+                        count++;
+                    }
+                }
+            }
+            return count;
+        }
+
+        function revealAdjacentCells(cell) {
+            const row = parseInt(cell.dataset.row);
+            const col = parseInt(cell.dataset.col);
+
+            for (let i = -1; i <= 1; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    const neighbor = document.querySelector(`.cell[data-row='${row + i}'][data-col='${col + j}']`);
+                    if (neighbor && !neighbor.classList.contains('revealed') && !neighbor.classList.contains('bomb')) {
+                        revealCell(neighbor);
+                    }
+                }
+            }
+        }
+
+        function revealAllBombs() {
+            const bombs = document.querySelectorAll('.cell.bomb');
+            bombs.forEach(bomb => {
+                bomb.classList.add('revealed');
+                bomb.querySelector('img.bomb').style.display = 'block';
+            });
+        }
+
+        restartButton.addEventListener('click', createGrid);
+
+        createGrid();
+    </script>
+</body>
+</html>
