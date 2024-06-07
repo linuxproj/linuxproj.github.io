@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reversi Gioco</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        #game {
+            text-align: center;
+            position: relative;
+        }
+        #board {
+            display: grid;
+            grid-template-columns: repeat(8, 50px);
+            grid-template-rows: repeat(8, 50px);
+            gap: 2px;
+            margin-bottom: 10px;
+            position: relative;
+        }
+        .cell {
+            width: 50px;
+            height: 50px;
+            background-color: green;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+        .disc {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: none;
+        }
+        .disc.black {
+            background-color: black;
+        }
+        .disc.white {
+            background-color: white;
+        }
+        #restart {
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+        .arrow {
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-bottom: 20px solid red;
+            display: none;
+            transform: rotate(0deg);
+            transition: transform 0.3s ease;
+        }
+        #currentPlayer {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game">
+        <div id="currentPlayer"></div>
+        <div id="board"></div>
+        <div id="arrow" class="arrow"></div>
+        <button id="restart">Ricomincia</button>
+    </div>
+    <script>
+        const boardElement = document.getElementById('board');
+        const restartButton = document.getElementById('restart');
+        const arrowElement = document.getElementById('arrow');
+        const currentPlayerElement = document.getElementById('currentPlayer');
+        let board, currentPlayer;
+
+        function initGame() {
+            board = Array(8).fill(null).map(() => Array(8).fill(null));
+            board[3][3] = 'white';
+            board[3][4] = 'black';
+            board[4][3] = 'black';
+            board[4][4] = 'white';
+            currentPlayer = 'black';  // Change to 'white' if you want to start as white
+            renderBoard();
+            updateCurrentPlayerText();
+            positionArrow();
+        }
+
+        function renderBoard() {
+            boardElement.innerHTML = '';
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j < 8; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    cell.addEventListener('click', handleCellClick);
+                    const disc = document.createElement('div');
+                    disc.className = 'disc';
+                    if (board[i][j]) {
+                        disc.classList.add(board[i][j]);
+                        disc.style.display = 'block';
+                    }
+                    cell.appendChild(disc);
+                    boardElement.appendChild(cell);
+                }
+            }
+        }
+
+        function handleCellClick(event) {
+            const row = parseInt(event.target.dataset.row);
+            const col = parseInt(event.target.dataset.col);
+            if (isValidMove(row, col, currentPlayer)) {
+                makeMove(row, col, currentPlayer);
+                currentPlayer = currentPlayer === 'black' ? 'white' : 'black';
+                renderBoard();
+                updateCurrentPlayerText();
+                positionArrow();
+            }
+        }
+
+        function isValidMove(row, col, player) {
+            if (board[row][col] !== null) return false;
+            const opponent = player === 'black' ? 'white' : 'black';
+            const directions = [
+                [-1, 0], [1, 0], [0, -1], [0, 1],
+                [-1, -1], [-1, 1], [1, -1], [1, 1]
+            ];
+            return directions.some(([dx, dy]) => {
+                let x = row + dx;
+                let y = col + dy;
+                let foundOpponent = false;
+                while (x >= 0 && x < 8 && y >= 0 && y < 8 && board[x][y] === opponent) {
+                    x += dx;
+                    y += dy;
+                    foundOpponent = true;
+                }
+                return foundOpponent && x >= 0 && x < 8 && y >= 0 && y < 8 && board[x][y] === player;
+            });
+        }
+
+        function makeMove(row, col, player) {
+            board[row][col] = player;
+            const opponent = player === 'black' ? 'white' : 'black';
+            const directions = [
+                [-1, 0], [1, 0], [0, -1], [0, 1],
+                [-1, -1], [-1, 1], [1, -1], [1, 1]
+            ];
+            directions.forEach(([dx, dy]) => {
+                let x = row + dx;
+                let y = col + dy;
+                const toFlip = [];
+                while (x >= 0 && x < 8 && y >= 0 && y < 8 && board[x][y] === opponent) {
+                    toFlip.push([x, y]);
+                    x += dx;
+                    y += dy;
+                }
+                if (x >= 0 && x < 8 && y >= 0 && y < 8 && board[x][y] === player) {
+                    toFlip.forEach(([fx, fy]) => {
+                        board[fx][fy] = player;
+                    });
+                }
+            });
+        }
+
+        function positionArrow() {
+            arrowElement.style.display = 'block';
+            const startRow = currentPlayer === 'black' ? 3 : 4;
+            const startCol = currentPlayer === 'black' ? 4 : 3;
+            const cell = document.querySelector(`.cell[data-row="${startRow}"][data-col="${startCol}"]`);
+            const rect = cell.getBoundingClientRect();
+            const gameRect = document.getElementById('game').getBoundingClientRect();
+            arrowElement.style.top = `${rect.top - gameRect.top - 30}px`;
+            arrowElement.style.left = `${rect.left - gameRect.left + 15}px`;
+
+            // Rotate the arrow to point to the current player's disc
+            if (currentPlayer === 'black') {
+                arrowElement.style.transform = 'rotate(0deg)'; // Point down
+            } else {
+                arrowElement.style.transform = 'rotate(180deg)'; // Point up
+            }
+        }
+
+        function updateCurrentPlayerText() {
+            currentPlayerElement.textContent = `Giocatore: ${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}`;
+        }
+
+        restartButton.addEventListener('click', initGame);
+        initGame();
+    </script>
+</body>
+</html>
